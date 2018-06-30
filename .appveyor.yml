@@ -1,0 +1,92 @@
+# Notes:
+# - Minimal appveyor.yml file is an empty file. All sections are optional.
+# - Indent each level of configuration with 2 spaces. Do not use tabs!
+# - All section names are case-sensitive.
+# - Section names should be unique on each level.
+
+#---------------------------------#
+#  general configuration          #
+#---------------------------------#
+
+# version format
+version: '{branch}-{build}'
+
+# Do not build on tags (GitHub only)
+skip_tags: true
+
+# manual mode
+branches:
+  except:
+    - /.*/
+
+
+#---------------------------------#
+#  environment configuration      #
+#---------------------------------#
+
+# environment variables
+# build system info: https://www.appveyor.com/docs/build-environment/#pre-installed-software
+os: Visual Studio 2017
+
+environment:
+  REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
+
+  AV1_SOL_FILE: AOM.sln
+  AV1_GIT_TAG: v1.0.0
+  AV1_GIT_URL: https://aomedia.googlesource.com/aom
+  AV1_MSBUILD_CMD_X64: /maxcpucount /property:Configuration=Release,Platform=x64 /target:aomdec,aomenc
+
+  YASM_URL: https://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe
+
+# clone directory
+clone_folder: *REPO_DIR
+
+
+#---------------------------------#
+#  build configuration            #
+#---------------------------------#
+
+# scripts to run before build
+before_build:
+  # install YASM
+  - mkdir "C:\YASM"
+  - appveyor DownloadFile "%YASM_URL%" -FileName "C:\YASM\yasm.exe"
+  - set PATH=%PATH%;C:\YASM;
+  - yasm --version
+  # clone AV1 repo
+  - cd "%REPO_DIR%"
+  - git clone --branch %AV1_GIT_TAG% %AV1_GIT_URL% --depth 1
+
+# to run your custom scripts instead of automatic MSBuild
+build_script:
+  - cd "%REPO_DIR%\aom"
+  - mkdir "_build_64" && cd "_build_64"
+  - cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF -DAOM_EXTRA_C_FLAGS="/MT" -DAOM_EXTRA_CXX_FLAGS="/MT" ..\
+  - msbuild "%AV1_SOL_FILE%" %AV1_MSBUILD_CMD_X64%
+
+# scripts to run before deployment
+after_build:
+  # prepare for artifacts packaging
+  - cd "%REPO_DIR%"
+  - mkdir "x64"
+  - copy "aom\_build_64\Release\*.exe" "x64"
+  - 7z a -sfx7z.sfx -mx9 "av1.exe" "Readme.md" "x64"
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "av1.exe").hash.ToString().toLower(); Write-Host $hash " *av1.exe"; }" > "av1.exe.sha256"'
+
+
+#---------------------------------#
+#  tests configuration            #
+#---------------------------------#
+
+test: off
+
+
+#---------------------------------#
+#  artifacts configuration        #
+#---------------------------------#
+
+artifacts:
+  - path: av1.exe
+    name: exe
+  - path: av1.exe.sha256
+    name: checksum
