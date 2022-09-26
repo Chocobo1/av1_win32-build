@@ -4,7 +4,7 @@
 [AppVeyor_link]: https://ci.appveyor.com/project/Chocobo1/av1-win32-build
 
 
-### <a href="https://aomedia.org/"><img src="https://aomedia.org/wp-content/uploads/2018/02/av1-logo.png" alt="AV1 logo" height="96"></a>
+### <a href="https://aomedia.org/"><img src="https://upload.wikimedia.org/wikipedia/commons/8/84/AV1_logo_2018.svg" alt="AV1 logo" height="96"></a>
 * x64 executables for Windows
 * Portable executables, no external dependencies (dlls)
 * Source code unmodified
